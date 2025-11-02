@@ -1,3 +1,4 @@
+import aiohttp
 import asyncio
 import glob
 import json
@@ -35,6 +36,19 @@ def cookie_txt_file():
         return f"""cookies/{str(cookie_txt_file).split("/")[-1]}"""
     except:
         return None
+
+
+async def get_stream_url(query: str, video: bool):
+    api_url = (
+        f"http://80.211.135.205:1470/youtube"
+        f"?query={query}&video={video}&api_key=AIzaSyCNDWhirI16BIMq66vMVsibtSiUQ6swguY"
+    )
+
+    async with aiohttp.ClientSession() as session:
+        async with session.get(api_url) as resp:
+            resp.raise_for_status()
+            data = await resp.json()
+            return data.get("stream_url", None)
 
 
 async def check_file_size(link):
@@ -670,9 +684,9 @@ class YouTubeAPI:
             return fpath
         elif video:
             direct = True
-            downloaded_file = await video_dl(vid_id)
+            downloaded_file = await get_stream_url(vid_id, True)
         else:
             direct = True
-            downloaded_file = await audio_dl(vid_id)
+            downloaded_file = await get_stream_url(vid_id, False)
         
         return downloaded_file, direct
