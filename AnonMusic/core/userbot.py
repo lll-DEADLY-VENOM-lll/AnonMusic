@@ -18,6 +18,7 @@ assistantids = []
 
 class Userbot(Client):
     def __init__(self):
+        # Clients initialize kar rahe hain
         self.one = self._create_client(config.STRING1, "AnonXAss1", 1)
         self.two = self._create_client(config.STRING2, "AnonXAss2", 2)
         self.three = self._create_client(config.STRING3, "AnonXAss3", 3)
@@ -33,7 +34,7 @@ class Userbot(Client):
                 session_string=str(string),
                 no_updates=True,
             )
-            client.no = num # Assistant number save kar rahe hain
+            client.no = num
             return client
         return None
 
@@ -44,47 +45,46 @@ class Userbot(Client):
         try:
             await client.start()
             
-            # User details fetch karein
+            # User information nikal rahe hain
             me = await client.get_me()
             client.id = me.id
             client.name = me.mention
-            client.username = me.username
+            
+            # Username check (Agar username nahi hai toh bot exit nahi hoga)
+            if not me.username:
+                LOGGER(__name__).warning(f"⚠️ Assistant {client.no} ({session_name}) ka username set nahi hai. Bot chalta rahega.")
+                client.username = "No_Username"
+            else:
+                client.username = me.username
 
-            # Username check
-            if not client.username:
-                LOGGER(__name__).error(
-                    f"⚙️ Assistant {client.no} ({session_name}) ka username set nahi hai. "
-                    f"Telegram me jaakar username banayein."
-                )
-                # Username ke bina bot aksar fail ho jata hai, isliye exit logic
-                sys.exit(1)
-
-            # Logger ID par message bhejne ki koshish (Bot exit nahi hoga agar ye fail hua)
+            # Log Group mein message bhejne ki koshish
             try:
                 await client.send_message(
                     config.LOGGER_ID,
-                    f"✅ Assistant {client.no} Started\nID: {client.id}\nName: {client.name}"
+                    f"✅ **Assistant {client.no} Started**\n\n**ID:** `{client.id}`\n**Name:** {client.name}\n**Username:** @{client.username}"
                 )
             except Exception as e:
                 LOGGER(__name__).warning(
-                    f"⚠️ Assistant {client.no} log message nahi bhej saka (Is it in Log Group?): {e}"
+                    f"⚠️ Assistant {client.no} log group mein message nahi bhej saka. Error: {e}"
                 )
 
             assistants.append(client.no)
-            assistantids.append(client.id)
+            if client.id not in assistantids:
+                assistantids.append(client.id)
+                
             LOGGER(__name__).info(f"✅ Assistant {client.no} Started as {client.name}")
 
         except RPCError as e:
-            LOGGER(__name__).error(f"🚫 Assistant {client.no} ({session_name}) RPC Error: {e}")
+            LOGGER(__name__).error(f"🚫 Assistant {client.no} ({session_name}) Session Error: {e}")
             sys.exit(1)
         except Exception as e:
             LOGGER(__name__).error(f"🚫 Assistant {client.no} ({session_name}) Unexpected Error: {e}")
             sys.exit(1)
 
     async def start(self):
-        LOGGER(__name__).info("Assistants start ho rahe hain...")
+        LOGGER(__name__).info("Assistants ko start kiya ja raha hai...")
         
-        # Ek saath saare assistants ko start karne ke liye list
+        # Tasks ki list banayein taaki sab ek saath start ho sakein (Fast boot)
         tasks = []
         if self.one: tasks.append(self._start_assistant(self.one, "STRING1"))
         if self.two: tasks.append(self._start_assistant(self.two, "STRING2"))
@@ -93,24 +93,23 @@ class Userbot(Client):
         if self.five: tasks.append(self._start_assistant(self.five, "STRING5"))
 
         if not tasks:
-            LOGGER(__name__).error("🚫 Koi bhi Session String (STRING1-5) nahi mili. Exiting.")
-            sys.exit(1)
+            LOGGER(__name__).error("🚫 Koi bhi Session String (STRING1-5) config mein nahi mili.")
+            return
 
-        # Saare tasks ko run karein
         await asyncio.gather(*tasks)
         
         if not assistants:
-            LOGGER(__name__).error("🚫 Koi bhi assistant start nahi ho paya. Exiting.")
+            LOGGER(__name__).error("🚫 Ek bhi assistant start nahi ho saka. Session strings check karein.")
             sys.exit(1)
             
         LOGGER(__name__).info(f"✅ Total {len(assistants)} assistants successfully active hain.")
 
     async def stop(self):
-        LOGGER(__name__).info("Assistants ko stop kiya ja raha hai...")
+        LOGGER(__name__).info("Stopping Assistants...")
         for client in [self.one, self.two, self.three, self.four, self.five]:
             if client:
                 try:
                     await client.stop()
-                except Exception:
+                except:
                     pass
-        LOGGER(__name__).info("✅ Saare assistants safely stop ho gaye.")
+        LOGGER(__name__).info("✅ All assistants stopped successfully.")
