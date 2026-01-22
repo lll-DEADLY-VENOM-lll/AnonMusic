@@ -22,8 +22,12 @@ BOT_TOKEN = getenv("BOT_TOKEN")
 MONGO_DB_URI = getenv("MONGO_DB_URI", None)
 
 # YouTube streaming proxy and key (used in API backend)
-YTPROXY_URL = getenv("YTPROXY_URL", "http://80.211.135.205:1470/youtube/")
-YT_API_KEY = getenv("YT_API_KEY", "AIzaSyCNDWhirI16BIMq66vMVsibtSiUQ6swguY")
+# Sirf wahi keys list mein jayengi jo empty nahi hain
+YOUTUBE_API_KEYS = [k.strip() for k in ["AIzaSyCFv5iwf9_CZKYcifMFK43zMZ78NH5GwE8, AIzaSyBlbkp4_XbjOZAMG6mr_QMmurBW9tcpu0s, AIzaSyCHRfOCjo77bI3HYRvwIjxIke2TuFT_vh8"] if k and k.strip()]
+
+# Purane code ke saath compatibility ke liye (Pehli key ko default rakha hai)
+API_KEY = YOUTUBE_API_KEYS[0] if YOUTUBE_API_KEYS else None
+
 DOWNLOADS_DIR = getenv("DOWNLOADS_DIR", "downloads")
 
 BOT_DOCS =  getenv("BOT_DOCS", "https://radha-music.vercel.app")
@@ -102,18 +106,18 @@ START_IMG_URLS = [
     "https://files.catbox.moe/i84mwm.jpg",
 ]
 
-START_IMG_URL = getenv("START_IMG_URL", "https://files.catbox.moe/x3a3nc.jpg")
-PING_IMG_URL = getenv("PING_IMG_URL", "https://files.catbox.moe/x3a3nc.jpg")
-PLAYLIST_IMG_URL = getenv("PLAYLIST_IMG_URL", "https://files.catbox.moe/v7u8ji.jpg")
-STATS_IMG_URL = getenv("STATS_IMG_URL", "https://files.catbox.moe/7g7j9f.jpg")
-TELEGRAM_AUDIO_URL = getenv("TELEGRAM_AUDIO_URL", "https://files.catbox.moe/fahcob.jpg")
-TELEGRAM_VIDEO_URL = getenv("TELEGRAM_VIDEO_URL", "https://files.catbox.moe/gy14qk.jpg")
-STREAM_IMG_URL = getenv("STREAM_IMG_URL", "https://files.catbox.moe/h0m0wz.jpg")
-SOUNCLOUD_IMG_URL = getenv("SOUNCLOUD_IMG_URL", "https://files.catbox.moe/ieduw9.jpg")
-YOUTUBE_IMG_URL = getenv("YOUTUBE_IMG_URL", "https://files.catbox.moe/rnwmfw.jpg")
-SPOTIFY_ARTIST_IMG_URL = getenv("SPOTIFY_ARTIST_IMG_URL", "https://files.catbox.moe/66ye0m.jpg")
-SPOTIFY_ALBUM_IMG_URL = getenv("SPOTIFY_ALBUM_IMG_URL", "https://files.catbox.moe/66ye0m.jpg")
-SPOTIFY_PLAYLIST_IMG_URL = getenv("SPOTIFY_PLAYLIST_IMG_URL", "https://files.catbox.moe/66ye0m.jpg")
+START_IMG_URL = getenv("START_IMG_URL", "https://graph.org/file/b763d7551de73f7e50b54-be16e31bc822798532.jpg")
+PING_IMG_URL = getenv("PING_IMG_URL", "https://graph.org/file/34521cbd14e3afc376ec3-6959de3f210be99f17.jpg")
+PLAYLIST_IMG_URL = getenv("PLAYLIST_IMG_URL", "https://graph.org/file/6629e32cf1734ba927217-513fd246bb3da98474.jpg")
+STATS_IMG_URL = getenv("STATS_IMG_URL", "https://graph.org/file/6629e32cf1734ba927217-513fd246bb3da98474.jpg")
+TELEGRAM_AUDIO_URL = getenv("TELEGRAM_AUDIO_URL", "https://graph.org/file/6629e32cf1734ba927217-513fd246bb3da98474.jpg")
+TELEGRAM_VIDEO_URL = getenv("TELEGRAM_VIDEO_URL", "https://graph.org/file/6629e32cf1734ba927217-513fd246bb3da98474.jpg")
+STREAM_IMG_URL = getenv("STREAM_IMG_URL", "https://graph.org/file/6629e32cf1734ba927217-513fd246bb3da98474.jpg")
+SOUNCLOUD_IMG_URL = getenv("SOUNCLOUD_IMG_URL", "https://graph.org/file/6629e32cf1734ba927217-513fd246bb3da98474.jpg")
+YOUTUBE_IMG_URL = getenv("YOUTUBE_IMG_URL", "https://graph.org/file/6629e32cf1734ba927217-513fd246bb3da98474.jpg")
+SPOTIFY_ARTIST_IMG_URL = getenv("SPOTIFY_ARTIST_IMG_URL", "https://graph.org/file/6629e32cf1734ba927217-513fd246bb3da98474.jpg")
+SPOTIFY_ALBUM_IMG_URL = getenv("SPOTIFY_ALBUM_IMG_URL", "https://graph.org/file/6629e32cf1734ba927217-513fd246bb3da98474.jpg")
+SPOTIFY_PLAYLIST_IMG_URL = getenv("SPOTIFY_PLAYLIST_IMG_URL", "https://graph.org/file/6629e32cf1734ba927217-513fd246bb3da98474.jpg")
 
 # Convert time (hh:mm:ss) to seconds
 def time_to_seconds(time: str) -> int:
