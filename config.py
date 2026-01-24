@@ -23,7 +23,7 @@ MONGO_DB_URI = getenv("MONGO_DB_URI", None)
 
 # YouTube streaming proxy and key (used in API backend)
 # Sirf wahi keys list mein jayengi jo empty nahi hain
-API_KEYS = [k.strip() for k in ["AIzaSyCFv5iwf9_CZKYcifMFK43zMZ78NH5GwE8, AIzaSyBlbkp4_XbjOZAMG6mr_QMmurBW9tcpu0s, AIzaSyCHRfOCjo77bI3HYRvwIjxIke2TuFT_vh8, AIzaSyC25uAJjYyGLAsgbmgmpanppJz7e5goQ2Y"] if k and k.strip()]
+YOUTUBE_API_KEYS = [k.strip() for k in ["AIzaSyCFv5iwf9_CZKYcifMFK43zMZ78NH5GwE8, AIzaSyBlbkp4_XbjOZAMG6mr_QMmurBW9tcpu0s, AIzaSyCHRfOCjo77bI3HYRvwIjxIke2TuFT_vh8, AIzaSyC25uAJjYyGLAsgbmgmpanppJz7e5goQ2Y"] if k and k.strip()]
 
 # Purane code ke saath compatibility ke liye (Pehli key ko default rakha hai)
 API_KEY = YOUTUBE_API_KEYS[0] if YOUTUBE_API_KEYS else None
