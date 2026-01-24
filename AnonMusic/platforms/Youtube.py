@@ -19,12 +19,12 @@ from AnonMusic.utils.formatters import time_to_seconds
 logger = LOGGER(__name__)
 
 # --- API SEQUENTIAL ROTATION LOGIC ---
-API_KEYS = [k.strip() for k in config.API_KEY.split(",")]
+API_KEYS = [k.strip() for k in config.API_KEY.split(",")] if config.API_KEY else []
 current_key_index = 0
 
 def get_youtube_client():
     global current_key_index
-    if current_key_index >= len(API_KEYS):
+    if not API_KEYS or current_key_index >= len(API_KEYS):
         return None
     return build("youtube", "v3", developerKey=API_KEYS[current_key_index], static_discovery=False)
 
@@ -37,15 +37,14 @@ def switch_key():
     logger.error("All YouTube API Keys are exhausted!")
     return False
 
-# --- COOKIE LOGIC (As per your file) ---
+# --- COOKIE LOGIC ---
 def get_cookie_file():
     try:
-        folder_path = f"{os.getcwd()}/cookies"
+        folder_path = os.path.join(os.getcwd(), "cookies")
         txt_files = glob.glob(os.path.join(folder_path, '*.txt'))
         if not txt_files:
             return None
-        cookie_file = random.choice(txt_files)
-        return cookie_file
+        return random.choice(txt_files)
     except Exception:
         return None
 
@@ -66,7 +65,8 @@ class YouTubeAPI:
         return duration_str, total_seconds
 
     async def exists(self, link: str, videoid: Union[bool, str] = None):
-        if videoid: link = self.base + link
+        if videoid: 
+            link = self.base + link
         return bool(re.search(self.regex, link))
 
     async def url(self, message: Message) -> Union[str, None]:
@@ -146,7 +146,6 @@ class YouTubeAPI:
                 search = await asyncio.to_thread(youtube.search().list(q=link, part="snippet", maxResults=10, type="video").execute)
                 if not search.get("items"): return None
                 
-                # Filter Logic (You can add duration filters here if needed)
                 item = search["items"][query_type]
                 vidid = item["id"]["videoId"]
                 title = item["snippet"]["title"]
@@ -160,26 +159,40 @@ class YouTubeAPI:
                 return None
 
     async def download(self, link: str, mystic, video=None, videoid=None, songaudio=None, songvideo=None, format_id=None, title=None) -> str:
-        if videoid: link = self.base + link
+        if videoid: 
+            link = self.base + link
+        
         loop = asyncio.get_running_loop()
         cookie = get_cookie_file()
         
-        common_opts = {"quiet": True, "no_warnings": True, "geo_bypass": True, "nocheckcertificate": True}
-        if cookie: common_opts["cookiefile"] = cookie
+        if not os.path.exists("downloads"):
+            os.mkdir("downloads")
+
+        common_opts = {
+            "quiet": True, 
+            "no_warnings": True, 
+            "geo_bypass": True, 
+            "nocheckcertificate": True,
+            "outtmpl": "downloads/%(title)s.%(ext)s"
+        }
+        if cookie: 
+            common_opts["cookiefile"] = cookie
 
         def ytdl_run(opts):
             with yt_dlp.YoutubeDL(opts) as ydl:
                 info = ydl.extract_info(link, download=True)
                 return ydl.prepare_filename(info)
 
-        if songvideo:
-            fpath = f"downloads/{title}.mp4"
-            opts = {**common_opts, "format": f"{format_id}+140/bestvideo+bestaudio", "outtmpl": f"downloads/{title}.%(ext)s", "merge_output_format": "mp4"}
-        elif songaudio:
-            fpath = f"downloads/{title}.mp3"
-            opts = {**common_opts, "format": "bestaudio/best", "outtmpl": f"downloads/{title}.%(ext)s", "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "mp3", "preferredquality": "192"}]}
-        else:
-            opts = {**common_opts, "format": "bestaudio/best", "outtmpl": "downloads/%(id)s.%(ext)s"}
+        try:
+            if songvideo:
+                opts = {**common_opts, "format": f"{format_id}+140/bestvideo+bestaudio", "merge_output_format": "mp4"}
+            elif songaudio:
+                opts = {**common_opts, "format": "bestaudio/best", "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "mp3", "preferredquality": "192"}]}
+            else:
+                opts = {**common_opts, "format": "bestaudio/best"}
 
-        downloaded_file = await loop.run_in_executor(None, lambda: ytdl_run(opts))
-        return downloaded_file, True
+            downloaded_file = await loop.run_in_executor(None, lambda: ytdl_run(opts))
+            return downloaded_file
+        except Exception as e:
+            logger.error(f"Download Error: {e}")
+            return None
