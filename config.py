@@ -55,8 +55,8 @@ UPSTREAM_BRANCH = getenv("UPSTREAM_BRANCH", "Master")
 GIT_TOKEN = getenv("GIT_TOKEN")  # Only required for private repos
 
 # Support & community
-SUPPORT_CHANNEL = getenv("SUPPORT_CHANNEL", "https://t.me/about_deadly_venom")
-SUPPORT_CHAT = getenv("SUPPORT_CHAT", "https://t.me/nobita_support")
+SUPPORT_CHANNEL = getenv("SUPPORT_CHANNEL", "https://t.me/hackarp13x")
+SUPPORT_CHAT = getenv("SUPPORT_CHAT", "https://t.me/bihari_music")
 
 # Assistant auto-leave =Voice Chat and Chat's setting
 AUTO_LEAVING_ASSISTANT = bool(getenv("AUTO_LEAVING_ASSISTANT", False))
