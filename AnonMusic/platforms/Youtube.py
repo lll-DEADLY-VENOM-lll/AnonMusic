@@ -37,15 +37,14 @@ def switch_key():
     logger.error("All YouTube API Keys are exhausted!")
     return False
 
-# --- COOKIE LOGIC (As per your file) ---
+# --- COOKIE LOGIC ---
 def get_cookie_file():
     try:
         folder_path = f"{os.getcwd()}/cookies"
         txt_files = glob.glob(os.path.join(folder_path, '*.txt'))
         if not txt_files:
             return None
-        cookie_file = random.choice(txt_files)
-        return cookie_file
+        return random.choice(txt_files)
     except Exception:
         return None
 
@@ -56,7 +55,6 @@ class YouTubeAPI:
         self.listbase = "https://youtube.com/playlist?list="
 
     def parse_duration(self, duration):
-        """ISO 8601 duration conversion"""
         match = re.search(r'PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?', duration)
         hours = int(match.group(1) or 0)
         minutes = int(match.group(2) or 0)
@@ -108,7 +106,6 @@ class YouTubeAPI:
                 thumb = item["snippet"]["thumbnails"]["high"]["url"]
                 d_min, d_sec = self.parse_duration(item["contentDetails"]["duration"])
                 return title, d_min, d_sec, thumb, vidid
-
             except HttpError as e:
                 if e.resp.status == 403 and switch_key(): continue
                 return None
@@ -122,18 +119,29 @@ class YouTubeAPI:
     async def video(self, link: str, videoid: Union[bool, str] = None):
         if videoid: link = self.base + link
         cookie = get_cookie_file()
-        opts = ["yt-dlp", "-g", "-f", "best[height<=?720]", "--geo-bypass", link]
+        
+        # Adding OAuth and better flags to bypass bot detection
+        opts = [
+            "yt-dlp", "-g", "-f", "best[height<=?720]", 
+            "--geo-bypass", "--no-playlist", "--username", "oauth2", "--password", ""
+        ]
         if cookie: opts.extend(["--cookies", cookie])
+        opts.append(link)
         
         proc = await asyncio.create_subprocess_exec(*opts, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
         stdout, stderr = await proc.communicate()
-        return (1, stdout.decode().split("\n")[0]) if stdout else (0, stderr.decode())
+        if stdout:
+            return (1, stdout.decode().split("\n")[0])
+        else:
+            logger.error(f"yt-dlp error: {stderr.decode()}")
+            return (0, stderr.decode())
 
     async def playlist(self, link, limit, user_id, videoid: Union[bool, str] = None):
         if videoid: link = self.listbase + link
         cookie = get_cookie_file()
         cookie_arg = f"--cookies {cookie}" if cookie else ""
-        cmd = f"yt-dlp {cookie_arg} -i --get-id --flat-playlist --playlist-end {limit} --skip-download {link}"
+        # Added OAuth to playlist fetching too
+        cmd = f"yt-dlp {cookie_arg} --username oauth2 --password '' -i --get-id --flat-playlist --playlist-end {limit} --skip-download {link}"
         playlist = await asyncio.create_subprocess_shell(cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
         stdout, _ = await playlist.communicate()
         return [k.strip() for k in stdout.decode().split("\n") if k.strip()]
@@ -145,13 +153,10 @@ class YouTubeAPI:
             try:
                 search = await asyncio.to_thread(youtube.search().list(q=link, part="snippet", maxResults=10, type="video").execute)
                 if not search.get("items"): return None
-                
-                # Filter Logic (You can add duration filters here if needed)
                 item = search["items"][query_type]
                 vidid = item["id"]["videoId"]
                 title = item["snippet"]["title"]
                 thumb = item["snippet"]["thumbnails"]["high"]["url"]
-                
                 v_res = await asyncio.to_thread(youtube.videos().list(part="contentDetails", id=vidid).execute)
                 d_min, _ = self.parse_duration(v_res["items"][0]["contentDetails"]["duration"])
                 return title, d_min, thumb, vidid
@@ -164,7 +169,16 @@ class YouTubeAPI:
         loop = asyncio.get_running_loop()
         cookie = get_cookie_file()
         
-        common_opts = {"quiet": True, "no_warnings": True, "geo_bypass": True, "nocheckcertificate": True}
+        # Critical: Use OAuth2 to bypass bot check
+        common_opts = {
+            "quiet": True, 
+            "no_warnings": True, 
+            "geo_bypass": True, 
+            "nocheckcertificate": True,
+            "username": "oauth2",
+            "password": "",
+            "noplaylist": True
+        }
         if cookie: common_opts["cookiefile"] = cookie
 
         def ytdl_run(opts):
@@ -173,13 +187,15 @@ class YouTubeAPI:
                 return ydl.prepare_filename(info)
 
         if songvideo:
-            fpath = f"downloads/{title}.mp4"
             opts = {**common_opts, "format": f"{format_id}+140/bestvideo+bestaudio", "outtmpl": f"downloads/{title}.%(ext)s", "merge_output_format": "mp4"}
         elif songaudio:
-            fpath = f"downloads/{title}.mp3"
             opts = {**common_opts, "format": "bestaudio/best", "outtmpl": f"downloads/{title}.%(ext)s", "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "mp3", "preferredquality": "192"}]}
         else:
             opts = {**common_opts, "format": "bestaudio/best", "outtmpl": "downloads/%(id)s.%(ext)s"}
 
-        downloaded_file = await loop.run_in_executor(None, lambda: ytdl_run(opts))
-        return downloaded_file, True
+        try:
+            downloaded_file = await loop.run_in_executor(None, lambda: ytdl_run(opts))
+            return downloaded_file, True
+        except Exception as e:
+            logger.error(f"Download Error: {str(e)}")
+            return None, False
