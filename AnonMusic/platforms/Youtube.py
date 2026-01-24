@@ -41,6 +41,8 @@ def switch_key():
 def get_cookie_file():
     try:
         folder_path = f"{os.getcwd()}/cookies"
+        if not os.path.exists(folder_path):
+            return None
         txt_files = glob.glob(os.path.join(folder_path, '*.txt'))
         if not txt_files:
             return None
@@ -119,13 +121,9 @@ class YouTubeAPI:
     async def video(self, link: str, videoid: Union[bool, str] = None):
         if videoid: link = self.base + link
         cookie = get_cookie_file()
-        
-        # Adding OAuth and better flags to bypass bot detection
-        opts = [
-            "yt-dlp", "-g", "-f", "best[height<=?720]", 
-            "--geo-bypass", "--no-playlist", "--username", "oauth2", "--password", ""
-        ]
-        if cookie: opts.extend(["--cookies", cookie])
+        opts = ["yt-dlp", "-g", "-f", "best[height<=?720]", "--geo-bypass", "--no-playlist"]
+        if cookie: 
+            opts.extend(["--cookies", cookie])
         opts.append(link)
         
         proc = await asyncio.create_subprocess_exec(*opts, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
@@ -140,51 +138,34 @@ class YouTubeAPI:
         if videoid: link = self.listbase + link
         cookie = get_cookie_file()
         cookie_arg = f"--cookies {cookie}" if cookie else ""
-        # Added OAuth to playlist fetching too
-        cmd = f"yt-dlp {cookie_arg} --username oauth2 --password '' -i --get-id --flat-playlist --playlist-end {limit} --skip-download {link}"
+        cmd = f"yt-dlp {cookie_arg} -i --get-id --flat-playlist --playlist-end {limit} --skip-download {link}"
         playlist = await asyncio.create_subprocess_shell(cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
         stdout, _ = await playlist.communicate()
         return [k.strip() for k in stdout.decode().split("\n") if k.strip()]
-
-    async def slider(self, link: str, query_type: int, videoid: Union[bool, str] = None):
-        while True:
-            youtube = get_youtube_client()
-            if not youtube: return None
-            try:
-                search = await asyncio.to_thread(youtube.search().list(q=link, part="snippet", maxResults=10, type="video").execute)
-                if not search.get("items"): return None
-                item = search["items"][query_type]
-                vidid = item["id"]["videoId"]
-                title = item["snippet"]["title"]
-                thumb = item["snippet"]["thumbnails"]["high"]["url"]
-                v_res = await asyncio.to_thread(youtube.videos().list(part="contentDetails", id=vidid).execute)
-                d_min, _ = self.parse_duration(v_res["items"][0]["contentDetails"]["duration"])
-                return title, d_min, thumb, vidid
-            except HttpError as e:
-                if e.resp.status == 403 and switch_key(): continue
-                return None
 
     async def download(self, link: str, mystic, video=None, videoid=None, songaudio=None, songvideo=None, format_id=None, title=None) -> str:
         if videoid: link = self.base + link
         loop = asyncio.get_running_loop()
         cookie = get_cookie_file()
         
-        # Critical: Use OAuth2 to bypass bot check
         common_opts = {
             "quiet": True, 
             "no_warnings": True, 
             "geo_bypass": True, 
             "nocheckcertificate": True,
-            "username": "oauth2",
-            "password": "",
             "noplaylist": True
         }
-        if cookie: common_opts["cookiefile"] = cookie
+        if cookie: 
+            common_opts["cookiefile"] = cookie
 
         def ytdl_run(opts):
-            with yt_dlp.YoutubeDL(opts) as ydl:
-                info = ydl.extract_info(link, download=True)
-                return ydl.prepare_filename(info)
+            try:
+                with yt_dlp.YoutubeDL(opts) as ydl:
+                    info = ydl.extract_info(link, download=True)
+                    return ydl.prepare_filename(info)
+            except Exception as e:
+                logger.error(f"yt-dlp download internal error: {e}")
+                return None
 
         if songvideo:
             opts = {**common_opts, "format": f"{format_id}+140/bestvideo+bestaudio", "outtmpl": f"downloads/{title}.%(ext)s", "merge_output_format": "mp4"}
@@ -193,9 +174,8 @@ class YouTubeAPI:
         else:
             opts = {**common_opts, "format": "bestaudio/best", "outtmpl": "downloads/%(id)s.%(ext)s"}
 
-        try:
-            downloaded_file = await loop.run_in_executor(None, lambda: ytdl_run(opts))
+        downloaded_file = await loop.run_in_executor(None, lambda: ytdl_run(opts))
+        
+        if downloaded_file:
             return downloaded_file, True
-        except Exception as e:
-            logger.error(f"Download Error: {str(e)}")
-            return None, False
+        return None, False # Isse 'media_path' wala NoneType error nahi aayega agar handle kiya ho.
